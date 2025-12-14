@@ -15,13 +15,9 @@
 
 - Windows 10/11
 - CMake 3.16+
-- SFML 3.0.2
+- SFML 2.5.1
 - VS Code + CMake Tools
 
 ## 构建步骤
 
-### 1. 生成构建文件
-```bash
-mkdir build
-cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+运行 `build_full.bat` 开始游戏。
