@@ -417,3 +417,10 @@ int ObstacleParticle::randomInt(int min, int max) const {
     std::uniform_int_distribution<int> dist(min, max);
     return dist(gen);
 }
+
+void ObstacleParticle::adjustSpeed(float multiplier) {
+    speed *= multiplier;
+    
+    // 如果需要，也可以调整粒子系统的速度
+    // 例如：更新轨迹粒子速度等
+}

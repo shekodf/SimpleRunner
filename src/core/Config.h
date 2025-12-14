@@ -34,6 +34,10 @@ namespace Config {
     // 粒子障碍物设置
     const float PARTICLE_OBSTACLE_RADIUS = 20.0f;
     const float PARTICLE_OBSTACLE_SPAWN_TIME = 1.2f;
+    
+    // 速度增长设置
+    const float SPEED_INCREASE_INTERVAL = 10.0f;  // 每10秒增加一次速度
+    const float SPEED_INCREASE_AMOUNT = 20.0f;    // 每次增加20速度单位
+    const float MAX_OBSTACLE_SPEED = 500.0f;      // 最大速度限制
 }
-
 #endif

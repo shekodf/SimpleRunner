@@ -6,7 +6,7 @@
 #include <vector>
 #include "Config.h"
 #include "../entities/Player.h"
-#include "../entities/ObstacleParticle.h"  // 使用粒子障碍物
+#include "../entities/ObstacleParticle.h"
 #include "../systems/ScoreSystem.h"
 
 class Game {
@@ -19,43 +19,46 @@ private:
     void update(float deltaTime);
     void render();
     
-    // 游戏状态
+    // 游戏状态 - 添加开始界面
     enum class GameState {
-        Playing,
-        GameOver
+        StartScreen,  // 开始界面
+        Playing,      // 游戏中
+        GameOver      // 游戏结束
     };
     
     GameState currentState;
     sf::Clock gameClock;
     float obstacleSpawnTimer;
     
-    // SFML窗口和渲染
+    float speedIncreaseTimer;
+    float currentObstacleSpeedMin;
+    float currentObstacleSpeedMax;
+    int speedLevel;
+    
     sf::RenderWindow window;
     
-    // 游戏实体
     Player player;
-    std::vector<std::unique_ptr<ObstacleParticle>> obstacles;  // 粒子障碍物
+    std::vector<std::unique_ptr<ObstacleParticle>> obstacles;
     
-    // 游戏系统
     ScoreSystem scoreSystem;
     
-    // 游戏字体
     sf::Font font;
     
-    // 生成障碍物
+    // 开始界面相关
+    bool showInstructions;
+    float blinkTimer;
+    sf::Text pressAnyKeyText;
+    
     void spawnObstacle();
-    
-    // 碰撞检测
     bool checkCollisions();
-    
-    // 绘制UI
     void drawUI();
-    
-    // 绘制调试信息
     void drawDebugInfo();
-    
-    // 绘制游戏说明
-    void drawInstructions();
+    void drawStartScreen();  // 改为绘制开始界面
+    void drawGameInstructions();  // 游戏中的说明
+    void drawGameOverUI();  // 新增：绘制游戏结束界面
+    void updateDifficulty(float deltaTime);
+    void resetDifficulty();
+    void startGame();  // 开始游戏
 };
 
 #endif

@@ -19,6 +19,8 @@ public:
     ObstacleParticle(float x, float y, float speed, Type type = Type::Random);
     ~ObstacleParticle();
     
+    void adjustSpeed(float multiplier);  // 调整速度
+    
     // 更新障碍物和粒子系统
     void update(float deltaTime);
     
