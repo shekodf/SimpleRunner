@@ -6,7 +6,7 @@
 ObstacleParticle::ObstacleParticle(float x, float y, float speed, Type type)
     : position(x, y), speed(speed), rotation(0.0f), rotationSpeed(0.0f),
       pulseScale(1.0f), pulseSpeed(2.0f), pulseTime(0.0f),
-      isActive(true), isDestroying(false), destroyTimer(0.0f), maxDestroyTime(1.0f) {
+      isActive(true), isDestroying(false), hitByBullet(false), destroyTimer(0.0f), maxDestroyTime(0.3f) {  // 减少销毁时间为0.3秒
     
     // 确定类型
     if (type == Type::Random) {
@@ -230,14 +230,24 @@ void ObstacleParticle::setupPoisonEffect() {
 void ObstacleParticle::update(float deltaTime) {
     if (!isActive) return;
     
+    // 如果是被子弹击中的状态，立即销毁
+    if (hitByBullet) {
+        isActive = false;
+        isDestroying = true;
+        // 停止所有粒子发射
+        if (trailSystem) trailSystem->stop();
+        if (auraSystem) auraSystem->stop();
+        return;
+    }
+    
     if (isDestroying) {
         destroyTimer += deltaTime;
         if (destroyTimer >= maxDestroyTime) {
             isActive = false;
         }
         // 销毁时停止发射新粒子
-        trailSystem->stop();
-        auraSystem->stop();
+        if (trailSystem) trailSystem->stop();
+        if (auraSystem) auraSystem->stop();
     }
     
     updatePosition(deltaTime);
@@ -257,6 +267,9 @@ void ObstacleParticle::update(float deltaTime) {
 
 void ObstacleParticle::draw(sf::RenderWindow& window) const {
     if (!isActive) return;
+    
+    // 如果是被子弹击中的状态，不绘制任何东西
+    if (hitByBullet) return;
     
     // 先绘制粒子（在底部）
     if (auraSystem) auraSystem->draw(window);
@@ -320,14 +333,89 @@ void ObstacleParticle::triggerCollisionEffect() {
     collisionSystem->burst(30);
 }
 
-void ObstacleParticle::triggerDestroyEffect() {
-    isDestroying = true;
-    createDestroyParticles();
+void ObstacleParticle::destroyImmediately() {
+    hitByBullet = true;  // 标记为被子弹击中
+    isActive = false;    // 立即变为不活跃
+    isDestroying = true; // 标记为正在销毁
+    
+    // 停止所有粒子发射
+    if (trailSystem) trailSystem->stop();
+    if (auraSystem) auraSystem->stop();
+    
+    // 可以创建一个快速的爆炸效果
+    triggerCollisionEffect();
 }
 
 bool ObstacleParticle::shouldRemove() const {
+    // 如果被子弹击中，立即移除
+    if (hitByBullet) return true;
+    
+    // 否则使用原来的逻辑
     return !isActive && (!collisionSystem || collisionSystem->getActiveParticleCount() == 0);
 }
+
+// ... [保留原有的 updatePosition、updateRotation、updatePulse、updateParticleSystems 函数] ...
+
+// ... [保留原有的 setupFireEffect、setupIceEffect、setupElectricEffect、setupPoisonEffect 函数] ...
+
+void ObstacleParticle::setCoreColors(const sf::Color& core, const sf::Color& outline) {
+    coreColor = core;
+    outlineColor = outline;
+    coreShape.setFillColor(core);
+    outlineShape.setOutlineColor(outline);
+}
+
+void ObstacleParticle::createDestroyParticles() {
+    // 创建销毁粒子效果（只有在玩家碰撞时才使用）
+    if (!hitByBullet) {  // 被子弹击中时不创建粒子效果
+        ParticleSystem::EmitterConfig destroyConfig;
+        destroyConfig.position = position;
+        destroyConfig.positionVariance = sf::Vector2f(30, 30);
+        destroyConfig.velocity = sf::Vector2f(0, 0);
+        destroyConfig.velocityVariance = sf::Vector2f(300, 300);
+        destroyConfig.startColor = coreColor;
+        destroyConfig.endColor = sf::Color(coreColor.r, coreColor.g, coreColor.b, 0);
+        destroyConfig.minSize = 5.0f;
+        destroyConfig.maxSize = 15.0f;
+        destroyConfig.minLifetime = 0.5f;
+        destroyConfig.maxLifetime = 1.0f;
+        destroyConfig.emissionRate = 0; // 一次性发射
+        destroyConfig.maxParticles = 100;
+        destroyConfig.continuous = false;
+        
+        if (!collisionSystem) {
+            collisionSystem = std::make_unique<ParticleSystem>();
+        }
+        
+        collisionSystem->setEmitter(destroyConfig);
+        collisionSystem->burst(80);
+    }
+}
+
+float ObstacleParticle::randomFloat(float min, float max) const {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dist(min, max);
+    return dist(gen);
+}
+
+int ObstacleParticle::randomInt(int min, int max) const {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dist(min, max);
+    return dist(gen);
+}
+
+void ObstacleParticle::adjustSpeed(float multiplier) {
+    speed *= multiplier;
+    
+    // 如果需要，也可以调整粒子系统的速度
+    // 例如：更新轨迹粒子速度等
+}
+
+// ... [已有的代码] ...
+
+// 私有函数实现
 
 void ObstacleParticle::updatePosition(float deltaTime) {
     position.y += speed * deltaTime;
@@ -370,57 +458,4 @@ void ObstacleParticle::updateParticleSystems(float deltaTime) {
     if (trailSystem) trailSystem->update(deltaTime);
     if (auraSystem) auraSystem->update(deltaTime);
     if (collisionSystem) collisionSystem->update(deltaTime);
-}
-
-void ObstacleParticle::setCoreColors(const sf::Color& core, const sf::Color& outline) {
-    coreColor = core;
-    outlineColor = outline;
-    coreShape.setFillColor(core);
-    outlineShape.setOutlineColor(outline);
-}
-
-void ObstacleParticle::createDestroyParticles() {
-    // 创建销毁粒子效果
-    ParticleSystem::EmitterConfig destroyConfig;
-    destroyConfig.position = position;
-    destroyConfig.positionVariance = sf::Vector2f(30, 30);
-    destroyConfig.velocity = sf::Vector2f(0, 0);
-    destroyConfig.velocityVariance = sf::Vector2f(300, 300);
-    destroyConfig.startColor = coreColor;
-    destroyConfig.endColor = sf::Color(coreColor.r, coreColor.g, coreColor.b, 0);
-    destroyConfig.minSize = 5.0f;
-    destroyConfig.maxSize = 15.0f;
-    destroyConfig.minLifetime = 0.5f;
-    destroyConfig.maxLifetime = 1.0f;
-    destroyConfig.emissionRate = 0; // 一次性发射
-    destroyConfig.maxParticles = 100;
-    destroyConfig.continuous = false;
-    
-    if (!collisionSystem) {
-        collisionSystem = std::make_unique<ParticleSystem>();
-    }
-    
-    collisionSystem->setEmitter(destroyConfig);
-    collisionSystem->burst(80);
-}
-
-float ObstacleParticle::randomFloat(float min, float max) const {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dist(min, max);
-    return dist(gen);
-}
-
-int ObstacleParticle::randomInt(int min, int max) const {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dist(min, max);
-    return dist(gen);
-}
-
-void ObstacleParticle::adjustSpeed(float multiplier) {
-    speed *= multiplier;
-    
-    // 如果需要，也可以调整粒子系统的速度
-    // 例如：更新轨迹粒子速度等
 }

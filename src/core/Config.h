@@ -11,7 +11,7 @@ namespace Config {
     
     // 游戏设置
     const float GRAVITY = 500.0f;
-    const float PLAYER_SPEED = 300.0f;
+    const float PLAYER_SPEED = 300.0f;  // 玩家的移动速度（水平和垂直相同）
     
     // 颜色定义
     const sf::Color BACKGROUND_COLOR = sf::Color(30, 30, 46);
@@ -22,7 +22,7 @@ namespace Config {
     const float PLAYER_WIDTH = 50.0f;
     const float PLAYER_HEIGHT = 50.0f;
     const float PLAYER_START_X = 400.0f;
-    const float PLAYER_START_Y = 500.0f;
+    const float PLAYER_START_Y = 300.0f;  // 改为屏幕中间，方便上下移动
     
     // 障碍物设置
     const float OBSTACLE_WIDTH = 40.0f;

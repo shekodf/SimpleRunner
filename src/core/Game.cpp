@@ -120,7 +120,6 @@ void Game::processEvents() {
     }
 }
 
-// 在Game.cpp的update函数中，添加额外的子弹管理
 void Game::update(float deltaTime) {
     if (currentState == GameState::StartScreen) {
         blinkTimer += deltaTime;
@@ -140,7 +139,7 @@ void Game::update(float deltaTime) {
         obstacle->update(deltaTime);
     }
     
-    // 移除离开屏幕的障碍物
+    // 移除离开屏幕或应该被移除的障碍物
     obstacles.erase(
         std::remove_if(obstacles.begin(), obstacles.end(),
             [](const std::unique_ptr<ObstacleParticle>& o) {
@@ -149,7 +148,6 @@ void Game::update(float deltaTime) {
         obstacles.end()
     );
     
-    // 生成障碍物
     obstacleSpawnTimer += deltaTime;
     if (obstacleSpawnTimer >= Config::PARTICLE_OBSTACLE_SPAWN_TIME) {
         spawnObstacle();
@@ -170,37 +168,14 @@ void Game::update(float deltaTime) {
     }
 }
 
-// 新增函数：检测子弹与障碍物的碰撞
-void Game::checkBulletCollisions() {
-    for (auto& bullet : player.getBullets()) {
-        if (!bullet->isActive()) continue;
-        
-        for (auto& obstacle : obstacles) {
-            if (bullet->getBounds().intersects(obstacle->getBounds())) {
-                // 触发子弹的销毁效果
-                bullet->triggerDestroyEffect();
-                
-                // 触发障碍物的碰撞效果和销毁效果
-                obstacle->triggerCollisionEffect();
-                obstacle->triggerDestroyEffect();
-                
-                // 增加分数（击碎障碍物得50分）
-                scoreSystem.addScore(50);
-                
-                std::cout << "Obstacle destroyed! +50 points" << std::endl;
-                
-                break; // 一颗子弹只能击中一个障碍物
-            }
-        }
-    }
-}
-
+// 修改碰撞检测函数
 bool Game::checkCollisions() {
     for (const auto& obstacle : obstacles) {
         if (player.getBounds().intersects(obstacle->getBounds())) {
             // 触发碰撞效果
             obstacle->triggerCollisionEffect();
-            obstacle->triggerDestroyEffect();
+            // 注意：这里不再调用 triggerDestroyEffect()，而是直接标记为可移除
+            // 障碍物会播放粒子效果后自然消失
             
             std::cout << "Collision with obstacle type: ";
             switch (obstacle->getType()) {
@@ -216,6 +191,30 @@ bool Game::checkCollisions() {
         }
     }
     return false;
+}
+
+// 修改子弹碰撞检测函数
+void Game::checkBulletCollisions() {
+    for (auto& bullet : player.getBullets()) {
+        if (!bullet->isActive()) continue;
+        
+        for (auto& obstacle : obstacles) {
+            if (bullet->getBounds().intersects(obstacle->getBounds())) {
+                // 触发子弹的销毁效果
+                bullet->triggerDestroyEffect();
+                
+                // 障碍物立即销毁
+                obstacle->destroyImmediately();
+                
+                // 增加分数（击碎障碍物得50分）
+                scoreSystem.addScore(50);
+                
+                std::cout << "Obstacle destroyed! +50 points" << std::endl;
+                
+                break; // 一颗子弹只能击中一个障碍物
+            }
+        }
+    }
 }
 
 void Game::render() {
@@ -312,6 +311,8 @@ void Game::drawStartScreen() {
         "Controls:",
         "- A / Left Arrow: Move left",
         "- D / Right Arrow: Move right",
+        "- W / Up Arrow: Move up",        // 新增
+        "- S / Down Arrow: Move down",    // 新增
         "- SPACE: Shoot bullets (max 3 for entire game)",
         "- ESC: Exit game",
         "- H: Toggle instructions",
@@ -328,10 +329,11 @@ void Game::drawStartScreen() {
         "- Speed increases every 10 seconds",
         "- Obstacles get faster over time"
     };
+
     
     float yPos = 240;  // 从更低位置开始
     for (const auto& line : instructions) {
-        sf::Text lineText(line, font, 16);  // 使用16号字体
+        sf::Text lineText(line, font, 10);  // 使用16号字体
         
         // 根据内容类型设置颜色
         if (line == "Objective:" || line == "Controls:" || line == "Obstacle Types:" || line == "Difficulty:") {
@@ -353,7 +355,7 @@ void Game::drawStartScreen() {
         window.draw(shadowText);
         
         window.draw(lineText);
-        yPos += (line.empty() ? 10 : 22);  // 空行间距小，有内容行间距大
+        yPos += (line.empty() ? 6 : 10);  // 空行间距小，有内容行间距大
     }
     
     // 将"按任意键开始"下移，避免重叠
@@ -367,13 +369,13 @@ void Game::drawStartScreen() {
     }
     
     // 绘制键盘提示
-    sf::Text keyHintText("Press any key to start game", font, 20);
-    keyHintText.setFillColor(sf::Color(255, 200, 100));
-    sf::FloatRect hintRect = keyHintText.getLocalBounds();
-    keyHintText.setOrigin(hintRect.left + hintRect.width / 2.0f,
-                         hintRect.top + hintRect.height / 2.0f);
-    keyHintText.setPosition(Config::WINDOW_WIDTH / 2.0f, Config::WINDOW_HEIGHT - 50); // 放在底部
-    window.draw(keyHintText);
+    // sf::Text keyHintText("Press any key to start game", font, 20);
+    // keyHintText.setFillColor(sf::Color(255, 200, 100));
+    // sf::FloatRect hintRect = keyHintText.getLocalBounds();
+    // keyHintText.setOrigin(hintRect.left + hintRect.width / 2.0f,
+    //                      hintRect.top + hintRect.height / 2.0f);
+    // keyHintText.setPosition(Config::WINDOW_WIDTH / 2.0f, Config::WINDOW_HEIGHT - 50); // 放在底部
+    // window.draw(keyHintText);
     
     // 更新pressAnyKeyText位置，放在keyHintText上方
     pressAnyKeyText.setPosition(Config::WINDOW_WIDTH / 2.0f, Config::WINDOW_HEIGHT - 100);
@@ -419,7 +421,7 @@ void Game::drawStartScreen() {
 
 void Game::drawGameInstructions() {
     if (currentState == GameState::Playing) {
-        sf::RectangleShape background(sf::Vector2f(400, 160)); // 增加高度
+        sf::RectangleShape background(sf::Vector2f(400, 180)); // 增加高度
         background.setFillColor(sf::Color(0, 0, 0, 180));
         background.setPosition(10, 10);
         window.draw(background);
@@ -436,12 +438,12 @@ void Game::drawGameInstructions() {
         warningText.setPosition(20, 45);
         window.draw(warningText);
         
-        sf::Text instructionText("Avoid the particle obstacles! Controls: A/D, Left/Right Arrow", 
-                                font, 14);
-        instructionText.setFillColor(sf::Color::White);
-        instructionText.setPosition(20, 70);
-        window.draw(instructionText);
-
+        sf::Text movementText("Move: A/D/Left/Right (horiz) W/S/Up/Down (vert)", 
+                             font, 14);
+        movementText.setFillColor(sf::Color(100, 255, 100));
+        movementText.setPosition(20, 70);
+        window.draw(movementText);
+        
         sf::Text bulletControlText("Press SPACE to shoot (3 bullets total, use wisely!)", 
                                 font, 14);
         bulletControlText.setFillColor(sf::Color(100, 255, 255));
@@ -459,6 +461,12 @@ void Game::drawGameInstructions() {
         tipText.setFillColor(sf::Color(255, 200, 100));
         tipText.setPosition(20, 145);
         window.draw(tipText);
+        
+        sf::Text eyesText("Player has blinking eyes! Watch them blink!", 
+                         font, 14);
+        eyesText.setFillColor(sf::Color(255, 200, 255));
+        eyesText.setPosition(20, 170);
+        window.draw(eyesText);
     }
 }
 
@@ -603,7 +611,7 @@ void Game::drawDebugInfo() {
 
 void Game::startGame() {
     currentState = GameState::Playing;
-    player.reset();
+    player.reset();  // 这会重置子弹计数
     obstacles.clear();
     scoreSystem.reset();
     obstacleSpawnTimer = 0.0f;
@@ -612,8 +620,10 @@ void Game::startGame() {
     
     std::cout << "===========================================" << std::endl;
     std::cout << "Game Started!" << std::endl;
-    std::cout << "Controls: A/D, Left/Right Arrow to move" << std::endl;
-    std::cout << "Press SPACE to shoot bullets (max 3)" << std::endl;
+    std::cout << "WARNING: You have only 3 bullets for the entire game!" << std::endl;
+    std::cout << "Controls: A/D, Left/Right Arrow to move horizontally" << std::endl;
+    std::cout << "          W/S, Up/Down Arrow to move vertically" << std::endl;
+    std::cout << "Press SPACE to shoot (3 bullets total)" << std::endl;
     std::cout << "Press H to toggle instructions" << std::endl;
     std::cout << "Press M to return to menu" << std::endl;
     std::cout << "===========================================" << std::endl;

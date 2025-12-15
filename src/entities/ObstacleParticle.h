@@ -48,14 +48,17 @@ public:
     // 触发碰撞粒子效果
     void triggerCollisionEffect();
     
-    // 触发销毁粒子效果
-    void triggerDestroyEffect();
+    // 触发立即销毁（子弹击中）
+    void destroyImmediately();  // 新增：立即销毁
     
     // 检查是否应该被移除
     bool shouldRemove() const;
     
     // 获取类型
     Type getType() const { return currentType; }
+    
+    // 检查是否被子弹击中
+    bool isHitByBullet() const { return hitByBullet; }  // 新增
     
 private:
     // 主形状（核心障碍物）
@@ -84,6 +87,7 @@ private:
     // 状态
     bool isActive;
     bool isDestroying;
+    bool hitByBullet;  // 新增：是否被子弹击中
     float destroyTimer;
     float maxDestroyTime;
     
