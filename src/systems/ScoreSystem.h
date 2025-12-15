@@ -19,6 +19,9 @@ public:
     // 获取存活时间
     float getTimeAlive() const { return timeAlive; }
     
+    // 新增：增加分数
+    void addScore(int points);
+    
 private:
     int score;
     float timeAlive;

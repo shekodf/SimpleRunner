@@ -51,6 +51,7 @@ private:
     
     void spawnObstacle();
     bool checkCollisions();
+    void checkBulletCollisions();  // 新增：检查子弹碰撞
     void drawUI();
     void drawDebugInfo();
     void drawStartScreen();  // 改为绘制开始界面
@@ -59,6 +60,10 @@ private:
     void updateDifficulty(float deltaTime);
     void resetDifficulty();
     void startGame();  // 开始游戏
+
+
+    
+
 };
 
 #endif

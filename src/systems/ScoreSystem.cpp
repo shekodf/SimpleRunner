@@ -29,6 +29,11 @@ void ScoreSystem::reset() {
     updateText();
 }
 
+void ScoreSystem::addScore(int points) {
+    score += points;
+    updateText();
+}
+
 void ScoreSystem::updateText() {
     std::stringstream ss;
     ss << "Score: " << score << "\nTime: " << static_cast<int>(timeAlive) << "s";
